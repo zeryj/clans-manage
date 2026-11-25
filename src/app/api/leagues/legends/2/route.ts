@@ -1,12 +1,36 @@
-import { NextResponse } from "next/server";
-import type { APIClanMember, APIPlayer, APILeagueGroupList, APILeagueGroupLog} from "@/lib/type";
 import { isAxiosError } from "axios";
+import { NextResponse } from "next/server";
+import { getCache, setCache } from "@/lib/cache";
+import type {
+  APIClanMember,
+  APILeagueGroupList,
+  APILeagueGroupLog,
+  APIPlayer,
+} from "@/lib/type";
 import api from "@/service/axios";
-import CwlMemberManager from "@/containers/CwlMemberManager";
+
+const CACHE_KEY = "legend_league_2";
+const CACHE_TTL_SECONDS = 180; // 3 menit
 
 export async function GET(request: Request) {
   try {
-    const clantag = "#2G0LCRUGJ";
+    const { searchParams } = new URL(request.url);
+    const forceRefresh = searchParams.get("forceRefresh") === "true";
+
+    // 1. Cek Cache Server jika bukan permintaan paksa refresh
+    if (!forceRefresh) {
+      const cachedData = getCache(CACHE_KEY);
+      if (cachedData) {
+        return NextResponse.json(cachedData, {
+          headers: {
+            "X-Cache": "HIT",
+            "Cache-Control": "public, s-maxage=180, stale-while-revalidate=300",
+          },
+        });
+      }
+    }
+
+    const clantag = process.env.CLAN_TAG || "#2G0LCRUGJ";
     const encodedTag = encodeURIComponent(clantag);
 
     const clan = await api.get(`/clans/${encodedTag}/members`);
@@ -16,100 +40,148 @@ export async function GET(request: Request) {
       (member: any) => member.leagueTier?.name === "Legend League II",
     );
 
-    const playersDetail: APIPlayer[] = await Promise.all(
-      legendLeagueMembers.map(async (player) => {
-        const encodedPTag = encodeURIComponent(player.tag);
-        const getplayer = await api.get(`/players/${encodedPTag}`);
-        return getplayer.data;
-      })
-    );
+    // 2. Fetch player detail dengan Concurrency Batching (chunk size 5)
+    const chunkSize = 5;
+    const playersDetail: APIPlayer[] = [];
 
-    const Promisehistory = playersDetail.map(async (members : any) => {
-      const encodedGTag = encodeURIComponent(members.currentLeagueGroupTag);
-      const membersTag = encodeURIComponent(members.tag);
-      const seasonId = members.currentLeagueSeasonId; 
-      
-      const lagendHistory = await api.get(
-        `/leaguegroup/${encodedGTag}/${seasonId}?playerTag=${membersTag}`,
+    for (let i = 0; i < legendLeagueMembers.length; i += chunkSize) {
+      const chunk = legendLeagueMembers.slice(i, i + chunkSize);
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (player) => {
+          const encodedPTag = encodeURIComponent(player.tag);
+          const getplayer = await api.get(`/players/${encodedPTag}`);
+          return getplayer.data;
+        }),
       );
-      
-      const groupmembers: APILeagueGroupList[] = lagendHistory.data?.members || [];
-      const membersAtk: APILeagueGroupLog[] = lagendHistory.data?.attackLogs || [];
-      const membersDef: APILeagueGroupLog[] = lagendHistory.data?.defenseLogs || [];
 
-      const playerRankData = groupmembers.find((item: any) => item.playerTag === members.tag) || null;
-      
-      
-  const totalDestructionAtk = membersAtk.reduce(
-    (sum: number, atk: any) => sum + (atk.destructionPercentage || 0),
-    0
-  );
-  const avgDestructionAtk = membersAtk.length > 0 ? Number((totalDestructionAtk / membersAtk.length).toFixed(2)) : 0;
-  const totalStarsAtk = membersAtk.reduce(
-    (sum: number, atk: any) => sum + (atk.stars || 0),
-    0
-  );
-  const avgStarAtk = membersAtk.length > 0 ? Number((totalStarsAtk / membersAtk.length).toFixed(2)) : 0;
+      chunkResults.forEach((result) => {
+        if (result.status === "fulfilled") {
+          playersDetail.push(result.value);
+        }
+      });
+    }
 
-  const totalDestructionDef = membersDef.reduce(
-    (sum: number, atk: any) => sum + (atk.destructionPercentage || 0),
-    0
-  );
-  const avgDestructionDef = membersDef.length > 0 ? Number((totalDestructionDef / membersDef.length).toFixed(2)) : 0;
-  const totalStarsDef = membersDef.reduce(
-    (sum: number, atk: any) => sum + (atk.stars || 0),
-    0
-  );
-  const avgStarDef = membersDef.length > 0 ? Number((totalStarsDef / membersDef.length).toFixed(2)) : 0;
+    // 3. Fetch league group logs dengan Concurrency Batching (chunk size 5)
+    const legendHistory: any[] = [];
 
-  const thropyAtk = membersAtk.reduce(
-    (sum: number, atk:any) => sum + (atk.trophies || 0),
-    0
-  )
-  const thropyDef = membersDef.reduce(
-    (sum: number, def:any) => sum + (def.trophies || 0),
-    0
-  )
-      return {
-        tag: members.tag,
-        name: members.name,
-        trophies: members.trophies,
-        leagueTier: members.leagueTier,
-        rankedHistory: playerRankData,
-        ThropyAtk:thropyAtk,
-        ThropyDef: thropyDef,
-        rankedAtk: membersAtk,
-        rankedDef: membersDef,
-        AvgStarAtk: avgStarAtk,
-        AvgDestructionAtk: avgDestructionAtk,
-        AvgStarDef: avgStarDef,
-        AvgDestructionDef: avgDestructionDef,
+    for (let i = 0; i < playersDetail.length; i += chunkSize) {
+      const chunk = playersDetail.slice(i, i + chunkSize);
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (playerDetail: any) => {
+          const encodedGTag = encodeURIComponent(
+            playerDetail.currentLeagueGroupTag,
+          );
+          const membersTag = encodeURIComponent(playerDetail.tag);
+          const seasonId = playerDetail.currentLeagueSeasonId;
 
-      };
-    });
+          const lagendHistory = await api.get(
+            `/leaguegroup/${encodedGTag}/${seasonId}?playerTag=${membersTag}`,
+          );
 
-    const results = await Promise.allSettled(Promisehistory);
+          const groupmembers: APILeagueGroupList[] =
+            lagendHistory.data?.members || [];
+          const membersAtk: APILeagueGroupLog[] =
+            lagendHistory.data?.attackLogs || [];
+          const membersDef: APILeagueGroupLog[] =
+            lagendHistory.data?.defenseLogs || [];
 
-    const legendHistory = results.map((result, index) => {
-      if (result.status === "fulfilled") {
-        return result.value;
-      }
+          const playerRankData =
+            groupmembers.find(
+              (item: any) => item.playerTag === playerDetail.tag,
+            ) || null;
 
-      const member = legendLeagueMembers[index];
-      return {
-        tag: member.tag,
-        name: member.name,
-        trophies: member.trophies,
-        leagueTier: member.leagueTier,
-        rankedHistory: null,
-        error: "History tidak tersedia",
-      };
-    });
+          const totalDestructionAtk = membersAtk.reduce(
+            (sum: number, atk: any) => sum + (atk.destructionPercentage || 0),
+            0,
+          );
+          const avgDestructionAtk =
+            membersAtk.length > 0
+              ? Number((totalDestructionAtk / membersAtk.length).toFixed(2))
+              : 0;
+          const totalStarsAtk = membersAtk.reduce(
+            (sum: number, atk: any) => sum + (atk.stars || 0),
+            0,
+          );
+          const avgStarAtk =
+            membersAtk.length > 0
+              ? Number((totalStarsAtk / membersAtk.length).toFixed(2))
+              : 0;
 
-    return NextResponse.json({
+          const totalDestructionDef = membersDef.reduce(
+            (sum: number, atk: any) => sum + (atk.destructionPercentage || 0),
+            0,
+          );
+          const avgDestructionDef =
+            membersDef.length > 0
+              ? Number((totalDestructionDef / membersDef.length).toFixed(2))
+              : 0;
+          const totalStarsDef = membersDef.reduce(
+            (sum: number, atk: any) => sum + (atk.stars || 0),
+            0,
+          );
+          const avgStarDef =
+            membersDef.length > 0
+              ? Number((totalStarsDef / membersDef.length).toFixed(2))
+              : 0;
+
+          const thropyAtk = membersAtk.reduce(
+            (sum: number, atk: any) => sum + (atk.trophies || 0),
+            0,
+          );
+          const thropyDef = membersDef.reduce(
+            (sum: number, def: any) => sum + (def.trophies || 0),
+            0,
+          );
+
+          return {
+            tag: playerDetail.tag,
+            name: playerDetail.name,
+            trophies: playerDetail.trophies,
+            leagueTier: playerDetail.leagueTier,
+            rankedHistory: playerRankData,
+            ThropyAtk: thropyAtk,
+            ThropyDef: thropyDef,
+            rankedAtk: membersAtk,
+            rankedDef: membersDef,
+            AvgStarAtk: avgStarAtk,
+            AvgDestructionAtk: avgDestructionAtk,
+            AvgStarDef: avgStarDef,
+            AvgDestructionDef: avgDestructionDef,
+          };
+        }),
+      );
+
+      chunkResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          legendHistory.push(result.value);
+        } else {
+          const member = chunk[index];
+          legendHistory.push({
+            tag: member.tag,
+            name: member.name,
+            trophies: member.trophies,
+            leagueTier: member.leagueTier,
+            rankedHistory: null,
+            error: "History tidak tersedia",
+          });
+        }
+      });
+    }
+
+    const responseData = {
       success: true,
       total: legendHistory.length,
       members: legendHistory,
+    };
+
+    // 4. Simpan ke Cache Server
+    setCache(CACHE_KEY, responseData, CACHE_TTL_SECONDS);
+
+    return NextResponse.json(responseData, {
+      headers: {
+        "X-Cache": "MISS",
+        "Cache-Control": "public, s-maxage=180, stale-while-revalidate=300",
+      },
     });
   } catch (error) {
     if (isAxiosError(error)) {
