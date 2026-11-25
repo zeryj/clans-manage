@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { APIClanMember } from "@/lib/type";
-
+import { FaTrophy } from "react-icons/fa";
+// import { normalizeDivisionName } from "@/hook/useLegendLeaderboard";
 interface ClanMemberListProps {
   members: APIClanMember[];
 }
 
-export default function ClanMemberList({ members, }: ClanMemberListProps) {
+export default function ClanMemberList({ members }: ClanMemberListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const filteredMembers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -65,25 +65,24 @@ export default function ClanMemberList({ members, }: ClanMemberListProps) {
                     {member.name || "Tanpa Nama"}
                   </p>
                   <div className="flex items-center gap-2 text-[11px] text-zinc-400">
-                      <>
-                        <span className="text-blue-400 font-mono">
-                          {member.leagueTier?.name}
-                        </span>
+                    <span className="text-blue-400 font-mono">
+                      {member.leagueTier?.name || member.leagueTier?.name || ""}
+                    </span>
 
-                        <span className="capitalize">{member.tag}</span>
-                        <span>•</span>
-                      </>
-                    
+                    <span className="capitalize">{member.tag}</span>
+                    <span>•</span>
+
                     <span>TH {member.townHallLevel}</span>
                   </div>
                 </div>
               </div>
 
-                <div className="text-right">
-                  <div className="flex items-center gap-1 justify-end font-semibold text-amber-400 text-sm">
-                    <span>{member.trophies}</span>
-                  </div>
+              <div className="text-right">
+                <div className="flex items-center gap-1 justify-end font-semibold text-amber-400 text-sm">
+                  <FaTrophy className="text-xs" />
+                  <span>{member.trophies}</span>
                 </div>
+              </div>
             </div>
           ))
         ) : (

@@ -1,33 +1,91 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { FaTrash } from "react-icons/fa";
 import { useCwlMemberSearch } from "@/hook/cwl";
+import data from "@/lib/data.json";
 import type { APIClanMember } from "@/lib/type";
 import { normalizeTag } from "@/lib/type";
-import data from "@/lib/data.json";
-import { FaTrash } from "react-icons/fa";
 
 interface ClanCwlListProps {
   id?: number;
   tag?: string;
   name?: string;
+  page: "admin" | "member"
 }
 
-export default function ClanCwlList({ id, tag, name }: ClanCwlListProps) {
-  // 1. Dapatkan clan dari data.json berdasarkan tag
+export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
+  // 1. Dapatkan clan dari data.json berdasarkan tag sebagai initial data
   const initialClan = data.ClanList.data.find(
     (c) =>
       (tag && normalizeTag(c.tag) === normalizeTag(tag)) ||
-      (id !== undefined && c.id === id)
+      (id !== undefined && c.id === id),
   );
 
-  // 2. Inisialisasi state dari CWL.data di data.json (jika ada)
   const initialMembers =
     (initialClan?.CWL?.data as unknown as APIClanMember[]) ?? [];
 
   const [cwlMembers, setCwlMembers] = useState<APIClanMember[]>(initialMembers);
+  const [deletingTag, setDeletingTag] = useState<string | null>(null);
 
-  // 3. Search dan filter
+  // 2. Fetch data terbaru dari /api/cwl
+  const fetchCwlMembers = useCallback(async () => {
+    if (!tag) return;
+    try {
+      const res = await fetch(`/api/cwl?clanTag=${encodeURIComponent(tag)}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json)) {
+          setCwlMembers(json);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal memuat data CWL:", err);
+    }
+  }, [tag]);
+
+  // 3. Listener untuk event pembaruan (saat ditambah via popup)
+  useEffect(() => {
+    const handleCwlUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ clanTag?: string }>;
+      if (!customEvent.detail?.clanTag || !tag) {
+        fetchCwlMembers();
+      } else if (
+        normalizeTag(customEvent.detail.clanTag) === normalizeTag(tag)
+      ) {
+        fetchCwlMembers();
+      }
+    };
+
+    window.addEventListener("cwl-updated", handleCwlUpdated);
+    return () => {
+      window.removeEventListener("cwl-updated", handleCwlUpdated);
+    };
+  }, [tag, fetchCwlMembers]);
+
+  // 4. Hapus member dari CWL
+  const handleDeleteMember = async (memberTag: string) => {
+    if (!tag) return;
+    setDeletingTag(memberTag);
+    try {
+      const res = await fetch("/api/cwl", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clanTag: tag, tag: memberTag }),
+      });
+      if (res.ok) {
+        setCwlMembers((prev) =>
+          prev.filter((m) => normalizeTag(m.tag) !== normalizeTag(memberTag)),
+        );
+      }
+    } catch (err) {
+      console.error("Gagal menghapus member CWL:", err);
+    } finally {
+      setDeletingTag(null);
+    }
+  };
+
+  // 5. Search dan filter
   const { searchTerm, setSearchTerm, filteredMembers } =
     useCwlMemberSearch(cwlMembers);
 
@@ -36,13 +94,11 @@ export default function ClanCwlList({ id, tag, name }: ClanCwlListProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#2c4176]">
         <div>
-          <h4>
+          <h4 className="font-semibold text-base">
             {name ? `Daftar Peserta CWL - ${name}` : "Daftar Peserta CWL"}
           </h4>
           {tag && (
-            <span className="text-xs text-zinc-400 font-mono">
-              Tag: {tag}
-            </span>
+            <span className="text-xs text-zinc-400 font-mono">Tag: {tag}</span>
           )}
         </div>
 
@@ -75,7 +131,7 @@ export default function ClanCwlList({ id, tag, name }: ClanCwlListProps) {
               key={member.tag}
               className="flex items-center justify-between py-2.5 px-2 hover:bg-[#12244F]/50 rounded transition"
             >
-              {/* Info Nama & Role */}
+              {/* Info Nama & Tag */}
               <div className="flex items-center gap-3">
                 <div>
                   <p className="font-medium text-sm text-zinc-100">
@@ -86,15 +142,28 @@ export default function ClanCwlList({ id, tag, name }: ClanCwlListProps) {
                   </p>
                 </div>
               </div>
+              {/* Tombol Hapus */}
+            {page === "admin" ? (
+              <button
+                type="button"
+                onClick={() => handleDeleteMember(member.tag)}
+                disabled={deletingTag === member.tag}
+                className="p-2 text-zinc-400 hover:text-red-400 transition rounded disabled:opacity-50"
+                title="Hapus dari CWL"
+              >
+                <FaTrash className="w-3.5 h-3.5" />
+              </button>
+            ) : null }
             </div>
+
           ))
         ) : (
           <div className="py-8 text-center text-sm text-zinc-400">
             {searchTerm
               ? `Tidak ada member CWL yang cocok dengan "${searchTerm}"`
-              : initialMembers.length > 0
-              ? ` ${initialMembers.length} member CWL`
-              : "Belum ada member CWL."}
+              : cwlMembers.length > 0
+                ? ` ${cwlMembers.length} member CWL`
+                : "Belum ada member CWL."}
           </div>
         )}
       </div>

@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 export interface APICwlMember {
-    name:string
-    tag:string
+  name: string;
+  tag: string;
 }
 
 export function useCwlMemberSearch(members: APICwlMember[] = []) {

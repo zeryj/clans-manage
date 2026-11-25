@@ -1,6 +1,6 @@
 import Image from "next/image";
-import ListClan from "@/lib/data.json";
 import Link from "next/link";
+import ListClan from "@/lib/data.json";
 
 interface ClanDisplayItem {
   id: number;
@@ -29,7 +29,9 @@ export default function Clan() {
             />
             <div>
               <p className="font-semibold">{item.name}</p>
-              <p className="text-xs text-zinc-400 font-mono">#{item.tag} | Tap to see more </p>
+              <p className="text-xs text-zinc-400 font-mono">
+                #{item.tag} | Tap to see more{" "}
+              </p>
             </div>
           </div>
         </Link>

@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import Sidebar from "./sidebar"
+import Link from "next/link";
+import { useState } from "react";
+import Sidebar from "./sidebar";
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <>
@@ -22,16 +22,24 @@ export default function Navbar() {
           </div>
 
           {/* Menu Hamburger (Mobile) */}
-          <div className="flex flex-col items-center gap-1 md:hidden cursor-pointer" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            className="flex flex-col items-center gap-1 md:hidden cursor-pointer"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
             <span className="w-[20px] block bg-white h-[2px]"></span>
             <span className="w-[20px] block bg-white h-[2px]"></span>
             <span className="w-[20px] block bg-white h-[2px]"></span>
-          </div>
+          </button>
         </div>
       </header>
 
       {/* Sidebar Mobile (Overlay) */}
-      <Sidebar isOpen={isMenuOpen} onToggle={() => setIsMenuOpen(!isMenuOpen)} />
+      <Sidebar
+        isOpen={isMenuOpen}
+        onToggle={() => setIsMenuOpen(!isMenuOpen)}
+      />
     </>
-  )
+  );
 }

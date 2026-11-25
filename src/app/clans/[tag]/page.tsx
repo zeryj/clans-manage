@@ -1,12 +1,11 @@
-import { clansApi } from "@/service/endpoints";
-import type { APIClan, APIClanMember, APIClanWar } from "@/lib/type";
-import { normalizeTag } from "@/lib/type";
-import data from "@/lib/data.json";
 import Image from "next/image";
-import ClanMemberList from "@/containers/ClanMemberList";
 import ClanCwlList from "@/containers/ClanCwlList";
+import ClanMemberList from "@/containers/ClanMemberList";
 import CwlMemberManager from "@/containers/CwlMemberManager";
-import Link from "next/link";
+import data from "@/lib/data.json";
+import type { APIClanMember } from "@/lib/type";
+import { normalizeTag } from "@/lib/type";
+import { officialClansApi } from "@/service/endpoints";
 
 interface PageProps {
   params: Promise<{ tag: string }>;
@@ -19,17 +18,14 @@ export default async function ClanDetailPage({ params }: PageProps) {
   const otherClans = allClans.filter(
     (c) => normalizeTag(c.tag) !== normalizeTag(tag),
   );
-  const clanFromJson = data.ClanList.data.find(
-    (c) => normalizeTag(c.tag) === normalizeTag(tag)
-  );
 
   const [clan, currentwar, otherMembersResults] = await Promise.all([
-    clansApi.getClan(tag),
-    clansApi.getCurrentWar(tag),
+    officialClansApi.getClan(tag),
+    officialClansApi.getCurrentWar(tag),
     Promise.all(
       otherClans.map(async (c) => {
         try {
-          const res = await clansApi.getClanMembers(c.tag);
+          const res = await officialClansApi.getClanMembers(c.tag);
           return (res?.items ?? []).map((m) => ({
             ...m,
             clanName: c.name,
@@ -184,7 +180,7 @@ export default async function ClanDetailPage({ params }: PageProps) {
       {/*daftar cwl (menampilkan semua kandidat dari seluruh clan)*/}
       <div className="border border-[#2c4176] rounded-md">
         {/* <CwlMemberManager members={cwlAvailableMembers} clanTag={clan.tag} /> */}
-        <ClanCwlList tag={clan.tag} name={clan.name} />
+        <ClanCwlList tag={clan.tag} name={clan.name} page="member" />
       </div>
     </div>
   );

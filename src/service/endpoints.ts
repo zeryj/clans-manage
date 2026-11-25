@@ -1,36 +1,37 @@
-import api from "@/service/axios";
 import type {
+  APIBuilderBaseLeague,
+  APIBuilderBaseLeagueList,
+  APICapitalLeague,
+  APICapitalLeagueList,
+  APICapitalRaidSeasons,
   APIClan,
   APIClanList,
   APIClanMember,
   APIClanMemberList,
+  APIClanSearchParams,
   APIClanWar,
-  APIClanWarLogList,
   APIClanWarLeagueGroup,
-  APICapitalRaidSeasons,
+  APIClanWarLogList,
+  APIGoldPassSeason,
+  APILabelList,
+  APILeague,
+  APILeagueList,
+  APILeagueSeasonList,
+  APILeagueTierList,
+  APIPaginationParams,
   APIPlayer,
   APIVerifyTokenRequest,
   APIVerifyTokenResponse,
-  APILeagueList,
-  APILeague,
-  APILeagueSeasonList,
-  APILeagueTierList,
-  APIWarLeagueList,
   APIWarLeague,
-  APICapitalLeagueList,
-  APICapitalLeague,
-  APIBuilderBaseLeagueList,
-  APIBuilderBaseLeague,
-  APILabelList,
-  APIGoldPassSeason,
-  APIClanSearchParams,
-  APIPaginationParams,
+  APIWarLeagueList,
 } from "@/lib/type";
-
+import api from "@/service/axios";
 
 export const formatTag = (tag: string): string => {
   const cleanTag = tag.trim().toUpperCase();
-  return cleanTag.startsWith("#") ? encodeURIComponent(cleanTag) : encodeURIComponent(`#${cleanTag}`);
+  return cleanTag.startsWith("#")
+    ? encodeURIComponent(cleanTag)
+    : encodeURIComponent(`#${cleanTag}`);
 };
 //CLANS ENDPOINTS (Migrated to ClashKing API: https://api.clashk.ing)
 export const clansApi = {
@@ -120,8 +121,13 @@ export const clansApi = {
    * Retrieve clan's clan war log
    * GET /v2/clan/{clanTag}/wars
    */
-  getClanWarLog: async (clanTag: string, params?: APIPaginationParams): Promise<APIClanWarLogList> => {
-    const { data } = await api.get(`/v2/clan/${formatTag(clanTag)}/wars`, { params });
+  getClanWarLog: async (
+    clanTag: string,
+    params?: APIPaginationParams,
+  ): Promise<APIClanWarLogList> => {
+    const { data } = await api.get(`/v2/clan/${formatTag(clanTag)}/wars`, {
+      params,
+    });
     return data;
   },
 
@@ -208,7 +214,9 @@ export const clansApi = {
    * Retrieve information about clan's current Clan War League group
    * GET /v2/cwl/{tag}/group
    */
-  getCurrentWarLeagueGroup: async (clanTag: string): Promise<APIClanWarLeagueGroup> => {
+  getCurrentWarLeagueGroup: async (
+    clanTag: string,
+  ): Promise<APIClanWarLeagueGroup> => {
     const { data } = await api.get(`/v2/cwl/${formatTag(clanTag)}/group`);
     return data;
   },
@@ -217,9 +225,73 @@ export const clansApi = {
    * Retrieve clan's capital raid seasons
    * GET /clans/{clanTag}/capitalraidseasons
    */
-  getCapitalRaidSeasons: async (clanTag: string, params?: APIPaginationParams): Promise<APICapitalRaidSeasons> => {
-    const { data } = await api.get<APICapitalRaidSeasons>(`/clans/${formatTag(clanTag)}/capitalraidseasons`, { params });
+  getCapitalRaidSeasons: async (
+    clanTag: string,
+    params?: APIPaginationParams,
+  ): Promise<APICapitalRaidSeasons> => {
+    const { data } = await api.get<APICapitalRaidSeasons>(
+      `/clans/${formatTag(clanTag)}/capitalraidseasons`,
+      { params },
+    );
     return data;
+  },
+};
+
+// OFFICIAL SUPERCELL CLANS API (https://api.clashofclans.com/v1)
+export const officialClansApi = {
+  /**
+   * Get information about a single clan from Official Supercell CoC API
+   * GET /clans/{clanTag}
+   */
+  getClan: async (clanTag: string): Promise<APIClan> => {
+    try {
+      const { data } = await api.get<APIClan>(`/clans/${formatTag(clanTag)}`);
+      return data;
+    } catch (err) {
+      console.warn(
+        `[Official CoC API] getClan gagal untuk ${clanTag}, fallback ke ClashKing API.`,
+        err,
+      );
+      return clansApi.getClan(clanTag);
+    }
+  },
+
+  /**
+   * List clan members from Official Supercell CoC API
+   * GET /clans/{clanTag}/members
+   */
+  getClanMembers: async (clanTag: string): Promise<APIClanMemberList> => {
+    try {
+      const { data } = await api.get<APIClanMemberList>(
+        `/clans/${formatTag(clanTag)}/members`,
+      );
+      return data;
+    } catch (err) {
+      console.warn(
+        `[Official CoC API] getClanMembers gagal untuk ${clanTag}, fallback ke ClashKing API.`,
+        err,
+      );
+      return clansApi.getClanMembers(clanTag);
+    }
+  },
+
+  /**
+   * Retrieve information about clan's current clan war from Official Supercell CoC API
+   * GET /clans/{clanTag}/currentwar
+   */
+  getCurrentWar: async (clanTag: string): Promise<APIClanWar> => {
+    try {
+      const { data } = await api.get<APIClanWar>(
+        `/clans/${formatTag(clanTag)}/currentwar`,
+      );
+      return data;
+    } catch (err) {
+      console.warn(
+        `[Official CoC API] getCurrentWar gagal untuk ${clanTag}, fallback ke ClashKing API.`,
+        err,
+      );
+      return clansApi.getCurrentWar(clanTag);
+    }
   },
 };
 // 2. CLAN WAR LEAGUES ENDPOINTS
@@ -229,7 +301,9 @@ export const clanWarLeaguesApi = {
    * GET /clanwarleagues/wars/{warTag}
    */
   getWar: async (warTag: string): Promise<APIClanWar> => {
-    const { data } = await api.get<APIClanWar>(`/clanwarleagues/wars/${formatTag(warTag)}`);
+    const { data } = await api.get<APIClanWar>(
+      `/clanwarleagues/wars/${formatTag(warTag)}`,
+    );
     return data;
   },
 };
@@ -241,7 +315,9 @@ export const playersApi = {
    * GET /players/{playerTag}
    */
   getPlayer: async (playerTag: string): Promise<APIPlayer> => {
-    const { data } = await api.get<APIPlayer>(`/players/${formatTag(playerTag)}`);
+    const { data } = await api.get<APIPlayer>(
+      `/players/${formatTag(playerTag)}`,
+    );
     return data;
   },
 
@@ -249,8 +325,14 @@ export const playersApi = {
    * Verify a player's API token
    * POST /players/{playerTag}/verifytoken
    */
-  verifyPlayerToken: async (playerTag: string, body: APIVerifyTokenRequest): Promise<APIVerifyTokenResponse> => {
-    const { data } = await api.post<APIVerifyTokenResponse>(`/players/${formatTag(playerTag)}/verifytoken`, body);
+  verifyPlayerToken: async (
+    playerTag: string,
+    body: APIVerifyTokenRequest,
+  ): Promise<APIVerifyTokenResponse> => {
+    const { data } = await api.post<APIVerifyTokenResponse>(
+      `/players/${formatTag(playerTag)}/verifytoken`,
+      body,
+    );
     return data;
   },
 
@@ -259,7 +341,9 @@ export const playersApi = {
    * GET /v2/player/{playerTag}/legend/season
    */
   getLegendSeason: async (playerTag: string): Promise<any> => {
-    const { data } = await api.get(`/v2/player/${formatTag(playerTag)}/legend/season`);
+    const { data } = await api.get(
+      `/v2/player/${formatTag(playerTag)}/legend/season`,
+    );
     return data;
   },
 };
@@ -289,8 +373,14 @@ export const leaguesApi = {
    * Get league seasons (Contoh: Legend League Seasons)
    * GET /leagues/{leagueId}/seasons
    */
-  getLeagueSeasons: async (leagueId: number | string, params?: APIPaginationParams): Promise<APILeagueSeasonList> => {
-    const { data } = await api.get<APILeagueSeasonList>(`/leagues/${leagueId}/seasons`, { params });
+  getLeagueSeasons: async (
+    leagueId: number | string,
+    params?: APIPaginationParams,
+  ): Promise<APILeagueSeasonList> => {
+    const { data } = await api.get<APILeagueSeasonList>(
+      `/leagues/${leagueId}/seasons`,
+      { params },
+    );
     return data;
   },
 
@@ -298,9 +388,15 @@ export const leaguesApi = {
    * Get specific season ranking for a league
    * GET /leagues/{leagueId}/seasons/{seasonId}
    */
-  getLeagueSeasonRanking: async (leagueId: number | string, seasonId: string, params?: APIPaginationParams): Promise<any> => {
+  getLeagueSeasonRanking: async (
+    leagueId: number | string,
+    seasonId: string,
+    params?: APIPaginationParams,
+  ): Promise<any> => {
     // Note: Ganti 'any' dengan tipe interface yang sesuai (misal: APILeagueSeasonRanking)
-    const { data } = await api.get(`/leagues/${leagueId}/seasons/${seasonId}`, { params });
+    const { data } = await api.get(`/leagues/${leagueId}/seasons/${seasonId}`, {
+      params,
+    });
     return data;
   },
 
@@ -311,12 +407,12 @@ export const leaguesApi = {
   getLeagueGroupPlayerStats: async (
     leagueGroupTag: string,
     leagueSeasonId: number | string,
-    params?: { playerTag?: string } & APIPaginationParams
+    params?: { playerTag?: string } & APIPaginationParams,
   ): Promise<any> => {
     // Note: Ganti 'any' dengan tipe interface responsmu
     const { data } = await api.get(
       `/leaguegroup/${formatTag(leagueGroupTag)}/${leagueSeasonId}`,
-      { params }
+      { params },
     );
     return data;
   },
@@ -325,8 +421,12 @@ export const leaguesApi = {
    * Get list of league tiers
    * GET /leaguetiers
    */
-  getLeagueTiers: async (params?: APIPaginationParams): Promise<APILeagueTierList> => {
-    const { data } = await api.get<APILeagueTierList>("/leaguetiers", { params });
+  getLeagueTiers: async (
+    params?: APIPaginationParams,
+  ): Promise<APILeagueTierList> => {
+    const { data } = await api.get<APILeagueTierList>("/leaguetiers", {
+      params,
+    });
     return data;
   },
 
@@ -334,7 +434,9 @@ export const leaguesApi = {
    * Get list of war leagues
    * GET /warleagues
    */
-  getWarLeagues: async (params?: APIPaginationParams): Promise<APIWarLeagueList> => {
+  getWarLeagues: async (
+    params?: APIPaginationParams,
+  ): Promise<APIWarLeagueList> => {
     const { data } = await api.get<APIWarLeagueList>("/warleagues", { params });
     return data;
   },
@@ -352,8 +454,12 @@ export const leaguesApi = {
    * Get list of capital leagues
    * GET /capitalleagues
    */
-  getCapitalLeagues: async (params?: APIPaginationParams): Promise<APICapitalLeagueList> => {
-    const { data } = await api.get<APICapitalLeagueList>("/capitalleagues", { params });
+  getCapitalLeagues: async (
+    params?: APIPaginationParams,
+  ): Promise<APICapitalLeagueList> => {
+    const { data } = await api.get<APICapitalLeagueList>("/capitalleagues", {
+      params,
+    });
     return data;
   },
 
@@ -361,8 +467,12 @@ export const leaguesApi = {
    * Get capital league information
    * GET /capitalleagues/{leagueId}
    */
-  getCapitalLeague: async (leagueId: number | string): Promise<APICapitalLeague> => {
-    const { data } = await api.get<APICapitalLeague>(`/capitalleagues/${leagueId}`);
+  getCapitalLeague: async (
+    leagueId: number | string,
+  ): Promise<APICapitalLeague> => {
+    const { data } = await api.get<APICapitalLeague>(
+      `/capitalleagues/${leagueId}`,
+    );
     return data;
   },
 
@@ -370,8 +480,13 @@ export const leaguesApi = {
    * Get list of Builder Base leagues
    * GET /builderbaseleagues
    */
-  getBuilderBaseLeagues: async (params?: APIPaginationParams): Promise<APIBuilderBaseLeagueList> => {
-    const { data } = await api.get<APIBuilderBaseLeagueList>("/builderbaseleagues", { params });
+  getBuilderBaseLeagues: async (
+    params?: APIPaginationParams,
+  ): Promise<APIBuilderBaseLeagueList> => {
+    const { data } = await api.get<APIBuilderBaseLeagueList>(
+      "/builderbaseleagues",
+      { params },
+    );
     return data;
   },
 
@@ -379,8 +494,12 @@ export const leaguesApi = {
    * Get Builder Base league information
    * GET /builderbaseleagues/{leagueId}
    */
-  getBuilderBaseLeague: async (leagueId: number | string): Promise<APIBuilderBaseLeague> => {
-    const { data } = await api.get<APIBuilderBaseLeague>(`/builderbaseleagues/${leagueId}`);
+  getBuilderBaseLeague: async (
+    leagueId: number | string,
+  ): Promise<APIBuilderBaseLeague> => {
+    const { data } = await api.get<APIBuilderBaseLeague>(
+      `/builderbaseleagues/${leagueId}`,
+    );
     return data;
   },
 };
@@ -392,7 +511,9 @@ export const labelsApi = {
    * List clan labels
    * GET /labels/clans
    */
-  getClanLabels: async (params?: APIPaginationParams): Promise<APILabelList> => {
+  getClanLabels: async (
+    params?: APIPaginationParams,
+  ): Promise<APILabelList> => {
     const { data } = await api.get<APILabelList>("/labels/clans", { params });
     return data;
   },
@@ -401,7 +522,9 @@ export const labelsApi = {
    * List player labels
    * GET /labels/players
    */
-  getPlayerLabels: async (params?: APIPaginationParams): Promise<APILabelList> => {
+  getPlayerLabels: async (
+    params?: APIPaginationParams,
+  ): Promise<APILabelList> => {
     const { data } = await api.get<APILabelList>("/labels/players", { params });
     return data;
   },

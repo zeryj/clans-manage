@@ -19,7 +19,7 @@ export const cocClient = axios.create({
 cocClient.interceptors.request.use(
   (request) => {
     // Endpoints under /v2/ belong to ClashKing API
-    if (request.url && request.url.startsWith("/v2/")) {
+    if (request.url?.startsWith("/v2/")) {
       request.baseURL = CLASHKING_BASE_URL;
       delete request.headers.Authorization;
       return request;
@@ -45,6 +45,5 @@ cocClient.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
 
 export default cocClient;

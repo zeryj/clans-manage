@@ -5,14 +5,18 @@ import type { APIClanMember } from "@/lib/type";
 
 interface CwlMemberPopupProps {
   members: APIClanMember[];
+  clanTag?: string;
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export default function CwlMemberPopup({
   members,
+  clanTag,
   open,
   onClose,
+  onSuccess,
 }: CwlMemberPopupProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -22,8 +26,6 @@ export default function CwlMemberPopup({
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
-
-
 
   const handleSave = async () => {
     if (selectedTags.length === 0) return;
@@ -35,11 +37,23 @@ export default function CwlMemberPopup({
       const res = await fetch("/api/cwl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedMembers),
+        body: JSON.stringify({
+          clanTag,
+          members: selectedMembers,
+        }),
       });
       if (!res.ok) throw new Error("Gagal menyimpan");
+
+      // Dispatch event agar ClanCwlList langsung update datanya
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("cwl-updated", { detail: { clanTag } }),
+        );
+      }
+
       onClose();
       setSelectedTags([]);
+      onSuccess?.();
     } catch {
       alert("Gagal menyimpan ke CWL.");
     } finally {
@@ -51,18 +65,29 @@ export default function CwlMemberPopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm "
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
     >
       <div
+        role="document"
         className="bg-[#12244F] border border-[#2c4176] rounded-lg p-6 w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl m-3"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-white">
             Pilih Member untuk CWL
           </h3>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-zinc-400 hover:text-white"
+          >
             ✕
           </button>
         </div>
@@ -72,6 +97,7 @@ export default function CwlMemberPopup({
             Terpilih: {selectedTags.length} member
           </span>
           <button
+            type="button"
             onClick={handleSave}
             disabled={selectedTags.length === 0 || saving}
             className="px-4 py-2 bg-[#12244F] border border-[#2c4176] rounded-md disabled:text-zinc-500 text-white text-sm font-medium transition"
@@ -82,20 +108,27 @@ export default function CwlMemberPopup({
 
         <div className="flex-1 overflow-y-auto space-y-1">
           {members.map((member) => {
-            // Cek apakah member ini sedang dipilih
             const isSelected = selectedTags.includes(member.tag);
 
             return (
               <div
                 key={member.tag}
+                role="button"
+                tabIndex={0}
                 className={`flex items-center justify-between p-2 rounded border-b-2 transition-all duration-300 ease-in-out cursor-pointer group
                     ${
                       isSelected
-                        ? "border-blue-500" 
+                        ? "border-blue-500"
                         : "border-transparent hover:bg-[#253d77]"
                     }
                   `}
                 onClick={() => toggleSelect(member.tag)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleSelect(member.tag);
+                  }
+                }}
               >
                 <div className="flex items-center gap-3">
                   <input
@@ -108,10 +141,14 @@ export default function CwlMemberPopup({
                     className="w-4 h-4 rounded border-[#2c4176] text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                   <div>
-                    <p className={`text-sm font-medium transition-colors duration-300 ${isSelected ? "text-blue-100" : "text-white"}`}>
+                    <p
+                      className={`text-sm font-medium transition-colors duration-300 ${isSelected ? "text-blue-100" : "text-white"}`}
+                    >
                       {member.name}
                     </p>
-                    <p className={`text-xs font-mono transition-colors duration-300 ${isSelected ? "text-blue-300" : "text-zinc-400"}`}>
+                    <p
+                      className={`text-xs font-mono transition-colors duration-300 ${isSelected ? "text-blue-300" : "text-zinc-400"}`}
+                    >
                       {member.tag}
                     </p>
                   </div>

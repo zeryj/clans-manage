@@ -1,8 +1,6 @@
-import type { LocalDataJson } from "@/lib/type";
-import { clansApi } from "@/service/endpoints";
-import type { APIClan } from "@/lib/type";
-
 import clanConfig from "@/lib/data.json";
+import type { APIClan } from "@/lib/type";
+import { clansApi } from "@/service/endpoints";
 
 export interface ConfiguredClanData {
   key: string;
@@ -11,14 +9,14 @@ export interface ConfiguredClanData {
   error?: string;
 }
 
-export async function useClanMemberSearch(): Promise<ConfiguredClanData[]> {
+export async function getClanMemberSearch(): Promise<ConfiguredClanData[]> {
   const clanList = clanConfig.ClanList.data;
 
   const results = await Promise.allSettled(
     clanList.map(async (clan) => {
       const clanData = await clansApi.getClan(clan.tag);
       return { key: String(clan.id), tag: clan.tag, clan: clanData };
-    })
+    }),
   );
 
   return results.map((res, index) => {
@@ -32,3 +30,6 @@ export async function useClanMemberSearch(): Promise<ConfiguredClanData[]> {
     };
   });
 }
+
+// Backward-compatibility alias
+export const useClanMemberSearch = getClanMemberSearch;
