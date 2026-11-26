@@ -13,7 +13,7 @@ export function useCwlMemberSearch(members: APICwlMember[] = []) {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return members;
 
-    // Bersihkan karakter '#' jika user mencari berdasarkan tag dengan/tanpa tanda '#'
+    
     const cleanQuery = query.startsWith("#") ? query.slice(1) : query;
 
     return members.filter((member) => {

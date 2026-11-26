@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import ListClan from "@/lib/data.json";
 import Navbar from "@/utility/navbar";
+import QueryProvider from "@/utility/QueryProvider";
 
 interface ClanDisplayItem {
   logo: string;
@@ -33,8 +34,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-[#071A45] text-white font-medium ">
-        <Navbar />
-        {children}
+        <QueryProvider>
+          <Navbar />
+          {children}
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,20 +1,93 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 export type LegendRankDivision =
   | "Legend League I"
   | "Legend League II"
   | "Legend League III";
 
+export interface LegendLeagueTier {
+  id: number;
+  name: string;
+  iconUrls?: {
+    small?: string;
+    medium?: string;
+    large?: string;
+  };
+}
+
+export interface LegendDaySummary {
+  day: string;
+  attacks: number;
+  defenses: number;
+  recordedDefenses?: number;
+  automaticDefenses?: number;
+  closingTrophies?: number | null;
+  globalRank?: number | null;
+  attackTrophies: number;
+  defenseTrophies: number;
+  trophies: number;
+}
+
+export interface LegendBattleLogItem {
+  type?: "attack" | "defense" | string;
+  stars?: number;
+  destruction?: number;
+  destructionPercentage?: number;
+  trophies?: number;
+  opponentTag?: string;
+  opponentName?: string;
+  timestamp?: string;
+}
+
+export interface LegendRankDay {
+  day: string;
+  battlelog:
+    | {
+        items?: LegendBattleLogItem[];
+      }
+    | LegendBattleLogItem[]
+    | null;
+}
+
+export interface LegendSeasonStat {
+  attack?: {
+    stars?: number;
+    destruction?: number;
+    trophies?: number;
+  };
+  defense?: {
+    stars?: number;
+    destruction?: number;
+    trophies?: number;
+  };
+  attacks?: number;
+  defenses?: number;
+  attackTrophies?: number;
+  defenseTrophies?: number;
+  avgAttackStars?: number;
+  avgAttackDestruction?: number;
+  avgDefenseStars?: number;
+  avgDefenseDestruction?: number;
+  [key: string]: unknown;
+}
+
 export interface LegendMember {
   tag: string;
   name: string;
   trophies: number;
-  leagueTier: any;
-  rankedHistory: any;
-  rankedAtk?: any[];
-  rankedDef?: any[];
+  leagueTier?: LegendLeagueTier;
+  
+  stat?: LegendSeasonStat | null;
+  rankedHistory?: {
+    tag: string;
+    items: LegendDaySummary[];
+  } | null;
+  rankday?: LegendRankDay[];
+  
+  rankedAtk?: LegendBattleLogItem[];
+  rankedDef?: LegendBattleLogItem[];
   AvgStarAtk?: number;
   AvgDestructionAtk?: number;
   AvgStarDef?: number;
@@ -30,66 +103,25 @@ interface LegendResponse {
   members: LegendMember[];
 }
 
-// Client-side in-memory cache untuk navigasi antar tab instan
-const clientTabCache = new Map<number, LegendResponse>();
-
-export function useLegendLeaderboard(id: 1 | 2 | 3, refreshKey: number = 0) {
-  const [data, setData] = useState<LegendResponse | null>(
-    () => clientTabCache.get(id) || null,
-  );
-  const [loading, setLoading] = useState<boolean>(!clientTabCache.has(id));
-  const [error, setError] = useState<string | null>(null);
-
-  // Lacak refreshKey sebelumnya untuk mendeteksi trigger refresh manual
-  const prevRefreshKeyRef = useRef(refreshKey);
-
-  useEffect(() => {
-    const isManualRefresh = refreshKey !== prevRefreshKeyRef.current;
-    prevRefreshKeyRef.current = refreshKey;
-
-    // Jika data sudah ada di client cache dan bukan manual refresh, pakai data cache langsung (0ms)
-    const cachedItem = clientTabCache.get(id);
-    if (cachedItem && !isManualRefresh) {
-      setData(cachedItem);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-
-    async function fetchLegends() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const query = isManualRefresh ? "?forceRefresh=true" : "";
-        const res = await fetch(`/api/leagues/legends/${id}${query}`, {
-          signal: controller.signal,
-        });
-
-        if (!res.ok) throw new Error("Gagal mengambil data liga");
-
-        const result: LegendResponse = await res.json();
-        clientTabCache.set(id, result);
-        setData(result);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
-          setError(err.message || "Terjadi kesalahan");
-        }
-      } finally {
-        setLoading(false);
+export function useLegendLeaderboard(id: 1 | 2 | 3) {
+  const query = useQuery<LegendResponse>({
+    queryKey: ["legend-leaderboard", id],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/leagues/legends/${id}`, { signal });
+      if (!res.ok) {
+        throw new Error(`Gagal mengambil data liga (Status: ${res.status})`);
       }
-    }
-
-    fetchLegends();
-    return () => controller.abort();
-  }, [id, refreshKey]);
+      return res.json();
+    },
+    staleTime: 1000 * 60 * 5, 
+  });
 
   return {
-    members: data?.members ?? [],
-    total: data?.total ?? 0,
-    loading,
-    error,
+    members: query.data?.members ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    isFetching: query.isFetching,
+    error: query.error ? (query.error as Error).message : null,
+    refetch: query.refetch,
   };
 }

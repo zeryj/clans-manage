@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaChevronDown,
   FaChevronUp,
@@ -17,38 +17,39 @@ import {
   type LegendMember,
   useLegendLeaderboard,
 } from "@/hook/useLegendLeaderboard";
+import Switch from "@/components/Switch";
+import { usePathname } from "next/navigation";
+
 
 export type SortOption = "trophies" | "atk" | "def";
 
-const LEGEND_DIVISIONS = [
-  { id: 1 as const, label: "Legend League I" },
-  { id: 2 as const, label: "Legend League II" },
-  { id: 3 as const, label: "Legend League III" },
-];
 
 export default function LegendLeaderboard() {
-  const [selectedId, setSelectedId] = useState<1 | 2 | 3>(1);
+  const pathname = usePathname();
+
+  
+  const selectedId: 1 | 2 | 3 = pathname?.startsWith("/leagues/legends/1")
+    ? 1
+    : pathname?.startsWith("/leagues/legends/3")
+      ? 3
+      : 2;
+
+
   const [sortBy, setSortBy] = useState<SortOption>("trophies");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedTag, setExpandedTag] = useState<string | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Memanggil hook berdasarkan tab divisi yang aktif (1, 2, atau 3)
-  const { members, total, loading, error } = useLegendLeaderboard(
-    selectedId,
-    refreshTrigger,
-  );
-
-  // Handler saat ganti divisi
-  const handleDivisionChange = (id: 1 | 2 | 3) => {
-    setSelectedId(id);
-    setExpandedTag(null);
-    if (id === 1 && (sortBy === "atk" || sortBy === "def")) {
+  useEffect(() => {
+    if (selectedId === 1 && sortBy !== "trophies") {
       setSortBy("trophies");
     }
-  };
+  }, [selectedId, sortBy]);
 
-  // Filter pencarian dan pengurutan (Total Trofi / Trofi Serangan / Trofi Pertahanan)
+  
+  const { members, total, loading, isFetching, error, refetch } =
+    useLegendLeaderboard(selectedId);
+
+  
   const processedMembers = useMemo(() => {
     let list = [...members];
 
@@ -74,7 +75,7 @@ export default function LegendLeaderboard() {
         if (defB !== defA) return defB - defA;
         return (b.trophies ?? 0) - (a.trophies ?? 0);
       }
-      // Default: Total Trofi
+      
       return (b.trophies ?? 0) - (a.trophies ?? 0);
     });
 
@@ -86,7 +87,7 @@ export default function LegendLeaderboard() {
   };
 
   const handleRefresh = () => {
-    setRefreshTrigger((prev) => prev + 1);
+    refetch();
   };
 
   return (
@@ -96,31 +97,8 @@ export default function LegendLeaderboard() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Division Filter Tabs */}
           <div className="flex items-center bg-[#12244F] p-1.5 rounded-xl border border-[#2c4176] overflow-x-auto">
-            {LEGEND_DIVISIONS.map((div) => {
-              const isSelected = selectedId === div.id;
-              return (
-                <button
-                  type="button"
-                  key={div.id}
-                  onClick={() => handleDivisionChange(div.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer whitespace-nowrap ${
-                    isSelected
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                      : "text-zinc-300 hover:bg-[#18316b] hover:text-white"
-                  }`}
-                >
-                  <span>{div.label}</span>
-                  {isSelected && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-mono bg-white/20 text-white">
-                      {total}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+            <Switch total={total}/>
           </div>
-
-        
         </div>
 
         {/* Second Row: Sort Controls & Search Input */}
@@ -455,7 +433,7 @@ function MemberRow({
             {divisionId === 2 && member.rankedAtk ? (
               <>
                 <div className="flex items-center gap-1.5 justify-end lg:justify-center">
-                  <span className="font-medium flex gap-2 text-amber-400">
+                  <span className="flex gap-2 text-amber-400 font-bold text-sm">
                     <FaTrophy className="text-xs" />
                     {member.ThropyAtk ?? 0}
                   </span>
@@ -473,7 +451,7 @@ function MemberRow({
             ) : divisionId === 3 && member.rankedAtk ? (
               <>
                 <div className="flex items-center gap-1.5 justify-end lg:justify-center">
-                  <span className="font-medium flex gap-2 text-amber-400">
+                  <span className="flex gap-2 text-amber-400 font-bold text-sm">
                     <FaTrophy className="text-xs" />
                     {member.ThropyAtk ?? 0}
                   </span>
@@ -509,7 +487,7 @@ function MemberRow({
             {divisionId === 2 && member.rankedDef ? (
               <>
                 <div className="flex items-center gap-1.5 justify-end lg:justify-center">
-                  <span className="font-medium flex gap-2 text-amber-400">
+                  <span className="flex gap-2 text-amber-400 font-bold text-sm">
                     <FaTrophy className="text-xs" />
                     {member.ThropyDef ?? 0}
                   </span>
@@ -527,7 +505,7 @@ function MemberRow({
             ) : divisionId === 3 && member.rankedDef ? (
               <>
                 <div className="flex items-center gap-1.5 justify-end lg:justify-center">
-                  <span className="font-medium flex gap-2 text-amber-400">
+                  <span className="flex gap-2 text-amber-400 font-bold text-sm">
                     <FaTrophy className="text-xs" />
                     {member.ThropyDef ?? 0}
                   </span>
@@ -543,7 +521,7 @@ function MemberRow({
                 </div>
               </>
             ) : (
-              <span className="text-zinc-500">-</span>
+              <span>data tidak ditemukan</span>
             )}
           </div>
         </div>
@@ -581,7 +559,7 @@ function MemberRow({
                     {member.rankedAtk.map((atk: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex justify-between items-center py-1 px-2 rounded bg-[#071A45] text-zinc-300"
+                        className={`flex justify-center items-center py-1 px-2 rounded ${atk.stars === 3 ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-300" : "bg-[#071A45] text-zinc-300"} `}
                       >
                         {/* <div className="flex gap-2">
                           <span className="truncate max-w-[60%]">
@@ -591,8 +569,20 @@ function MemberRow({
                         </div> */}
                         <span className="flex flex-col font-mono text-amber-300 flex items-center gap-1">
                           <span>
-                            {atk.stars ?? 0}{" "}
-                            <FaStar className="inline w-3 h-3" />
+                            {atk.stars == 3 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : atk.stars == 2 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : (
+                              <FaStar className="inline w-3 h-3" />
+                            )}
                           </span>{" "}
                           ({atk.destructionPercentage ?? 0}%)
                         </span>
@@ -621,7 +611,7 @@ function MemberRow({
                     {member.rankedDef.map((def: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex justify-between items-center py-1 px-2 rounded bg-[#071A45] text-zinc-300"
+                        className={`flex justify-center items-center py-1 px-2 rounded ${def.stars === 3 ? "bg-rose-500/15 border border-rose-500/40 text-rose-300" : "bg-[#071A45] text-zinc-300"}`}
                       >
                         {/* <div className="flex gap-2">
                           <span className="truncate max-w-[60%]">
@@ -631,8 +621,20 @@ function MemberRow({
                         </div> */}
                         <span className="flex flex-col font-mono text-amber-300 flex items-center gap-1">
                           <span>
-                            {def.stars ?? 0}{" "}
-                            <FaStar className="inline w-3 h-3" />
+                            {def.stars == 3 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : def.stars == 2 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : (
+                              <FaStar className="inline w-3 h-3" />
+                            )}
                           </span>{" "}
                           ({def.destructionPercentage ?? 0}%)
                         </span>
@@ -662,7 +664,7 @@ function MemberRow({
                     {member.rankedAtk.map((atk: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex justify-between items-center py-1 px-2 rounded bg-[#071A45] text-zinc-300"
+                        className={`flex justify-center items-center py-1 px-2 rounded ${atk.stars === 3 ? "bg-emerald-500/15 border border-emerald-500/40 text-emerald-300" : "bg-[#071A45] text-zinc-300"} text-zinc-300`}
                       >
                         {/* <div className="flex gap-2">
                           <span className="truncate max-w-[60%]">
@@ -672,8 +674,20 @@ function MemberRow({
                         </div> */}
                         <span className="flex flex-col font-mono text-amber-300 flex items-center gap-1">
                           <span>
-                            {atk.stars ?? 0}{" "}
-                            <FaStar className="inline w-3 h-3" />
+                            {atk.stars == 3 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : atk.stars == 2 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : (
+                              <FaStar className="inline w-3 h-3" />
+                            )}
                           </span>{" "}
                           ({atk.destructionPercentage ?? 0}%)
                         </span>
@@ -701,7 +715,7 @@ function MemberRow({
                     {member.rankedDef.map((def: any, idx: number) => (
                       <div
                         key={idx}
-                        className="flex justify-between items-center py-1 px-2 rounded bg-[#071A45] text-zinc-300"
+                        className={`flex justify-center items-center py-1 px-2 rounded ${def.stars === 3 ? "bg-rose-500/15 border border-rose-500/40 text-rose-300" : "bg-[#071A45] text-zinc-300"} text-zinc-300`}
                       >
                         {/* <div className="flex gap-2">
                           <span className="truncate max-w-[60%]">
@@ -711,8 +725,20 @@ function MemberRow({
                         </div> */}
                         <span className="flex flex-col font-mono text-amber-300 flex items-center gap-1">
                           <span>
-                            {def.stars ?? 0}{" "}
-                            <FaStar className="inline w-3 h-3" />
+                            {def.stars == 3 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : def.stars == 2 ? (
+                              <div>
+                                <FaStar className="inline w-3 h-3" />
+                                <FaStar className="inline w-3 h-3" />
+                              </div>
+                            ) : (
+                              <FaStar className="inline w-3 h-3" />
+                            )}
                           </span>{" "}
                           ({def.destructionPercentage ?? 0}%)
                         </span>
@@ -725,16 +751,113 @@ function MemberRow({
               </div>
             </div>
           ) : (
-            /* Detail Panel untuk Legend League I (rankedHistory) */
-            <div className="pt-3">
+           
+            <div className="flex flex-col gap-4 pt-3">
+              {/* 1. Ringkasan Season Stats (jika ada) */}
+              {member.stat && !Array.isArray(member.stat) && (
+                <div className="p-3 rounded-lg bg-[#12244F] border border-[#2c4176] flex flex-wrap gap-4 text-xs">
+                  <div>
+                    <span className="text-zinc-400">Avg Attack: </span>
+                    <span className="font-bold text-emerald-400">
+                      {member.stat.attack?.stars ?? 0}⭐ ({member.stat.attack?.destruction ?? 0}%)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-400">Avg Defense: </span>
+                    <span className="font-bold text-rose-400">
+                      {member.stat.defense?.stars ?? 0}⭐ (
+                      {member.stat.defense?.destruction ?? 0}%)
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Riwayat Harian (Maksimal 7 Hari Terakhir) */}
               <div className="p-3 rounded-lg bg-[#12244F] border border-[#2c4176]">
-                <p className="font-semibold text-blue-400 mb-2">
-                  Riwayat Season Legend League I
-                </p>
-                {member.rankedHistory ? (
-                  <p className="text-zinc-500">Data season tidak tersedia.</p>
+                <div className="font-semibold text-blue-300 mb-2.5 flex items-center justify-between">
+                  <span>Riwayat Harian Legend League (7 Hari Terakhir)</span>
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    {member.rankedHistory?.items?.length ?? 0} hari tercatat
+                  </span>
+                </div>
+
+                {member.rankedHistory?.items &&
+                member.rankedHistory.items.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                    {member.rankedHistory.items.map((item) => {
+                      
+                      const dayLog = member.rankday?.find(
+                        (r) => r.day === item.day,
+                      );
+                      const battles = Array.isArray(dayLog?.battlelog)
+                        ? dayLog.battlelog
+                        : (dayLog?.battlelog?.items ?? []);
+
+                      return (
+                        <div
+                          key={item.day}
+                          className="p-2.5 rounded-lg bg-[#071A45] border border-[#2c4176]/80 flex flex-col gap-2"
+                        >
+                          {/* Header Tanggal & Net Trofi */}
+                          <div className="flex items-center justify-between border-b border-[#1e3466] pb-1.5">
+                            <span className="font-mono font-semibold text-zinc-200">
+                              {item.day}
+                            </span>
+                            <span
+                              className={`font-mono font-bold px-1.5 py-0.5 rounded text-[11px] ${
+                                item.trophies >= 0
+                                  ? "bg-emerald-500/15 text-emerald-400"
+                                  : "bg-rose-500/15 text-rose-400"
+                              }`}
+                            >
+                              {item.trophies > 0
+                                ? `+${item.trophies}`
+                                : item.trophies}{" "}
+                              🏆
+                            </span>
+                          </div>
+
+                          {/* Stat Serangan & Pertahanan Hari Itu */}
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-emerald-400 flex items-center gap-1">
+                              <GiSwordClash /> +{item.attackTrophies} (
+                              {item.attacks}/8)
+                            </span>
+                            <span className="text-rose-400 flex items-center gap-1">
+                              <FaShieldAlt /> {item.defenseTrophies} (
+                              {item.defenses}/8)
+                            </span>
+                          </div>
+
+                          {/* Preview Battlelog Hari Itu (dari rankday) */}
+                          {Array.isArray(battles) && battles.length > 0 && (
+                            <div className="pt-1 border-t border-[#1e3466]/60 flex flex-wrap gap-1">
+                              {battles.map((b: any, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
+                                    b.type === "attack" || b.trophies > 0
+                                      ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
+                                      : "bg-rose-500/10 text-rose-300 border border-rose-500/30"
+                                  }`}
+                                >
+                                  {b.stars ?? 0}⭐{" "}
+                                  {b.destruction ??
+                                    b.destructionPercentage ??
+                                    0}
+                                  %
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p className="text-zinc-500">Data season tidak tersedia.</p>
+                  <p className="text-zinc-500">
+                    Belum ada riwayat harian Legend League.
+                  </p>
                 )}
               </div>
             </div>
