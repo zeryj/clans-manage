@@ -33,7 +33,7 @@ export const formatTag = (tag: string): string => {
     ? encodeURIComponent(cleanTag)
     : encodeURIComponent(`#${cleanTag}`);
 };
-//CLANS ENDPOINTS (Migrated to ClashKing API: https://api.clashk.ing)
+
 export const clansApi = {
   /**
    * Search all clans by name and/or filtering options
@@ -237,7 +237,7 @@ export const clansApi = {
   },
 };
 
-// OFFICIAL SUPERCELL CLANS API (https://api.clashofclans.com/v1)
+
 export const officialClansApi = {
   /**
    * Get information about a single clan from Official Supercell CoC API
@@ -294,7 +294,7 @@ export const officialClansApi = {
     }
   },
 };
-// 2. CLAN WAR LEAGUES ENDPOINTS
+
 export const clanWarLeaguesApi = {
   /**
    * Retrieve information about an individual Clan War League war
@@ -308,7 +308,7 @@ export const clanWarLeaguesApi = {
   },
 };
 
-//PLAYERS ENDPOINTS
+
 export const playersApi = {
   /**
    * Get information about a single player by player tag
@@ -348,7 +348,7 @@ export const playersApi = {
   },
 };
 
-// 4. LEAGUES ENDPOINTS
+
 
 export const leaguesApi = {
   /**
@@ -393,7 +393,7 @@ export const leaguesApi = {
     seasonId: string,
     params?: APIPaginationParams,
   ): Promise<any> => {
-    // Note: Ganti 'any' dengan tipe interface yang sesuai (misal: APILeagueSeasonRanking)
+    
     const { data } = await api.get(`/leagues/${leagueId}/seasons/${seasonId}`, {
       params,
     });
@@ -409,7 +409,7 @@ export const leaguesApi = {
     leagueSeasonId: number | string,
     params?: { playerTag?: string } & APIPaginationParams,
   ): Promise<any> => {
-    // Note: Ganti 'any' dengan tipe interface responsmu
+    
     const { data } = await api.get(
       `/leaguegroup/${formatTag(leagueGroupTag)}/${leagueSeasonId}`,
       { params },
@@ -504,7 +504,7 @@ export const leaguesApi = {
   },
 };
 
-//LABELS ENDPOINTS
+
 
 export const labelsApi = {
   /**

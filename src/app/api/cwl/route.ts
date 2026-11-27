@@ -1,34 +1,31 @@
-import { readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { supabase } from "@/lib/supabase";
 import type { APIClanMember } from "@/lib/type";
 import { normalizeTag } from "@/lib/type";
 
-const DATA_PATH = path.join(process.cwd(), "src", "lib", "data.json");
-
-// Structure: Setiap clan di ClanList.data punya field CWL.data
-interface ClanCwlItem {
-  id: number;
-  name: string;
-  tag: string;
-  logo: string;
-  CWL?: {
-    data: APIClanMember[];
-  };
+function mapDbMemberToApi(row: any): APIClanMember {
+  return {
+    tag: row.tag,
+    name: row.name,
+    townHallLevel: row.town_hall_level,
+    role: row.role,
+    expLevel: row.exp_level,
+    trophies: row.trophies,
+    clanName: row.clan_name,
+  } as APIClanMember;
 }
 
-interface DataJson {
-  ClanList: {
-    data: ClanCwlItem[];
-  };
-}
+async function findClanByTag(clanTag: string) {
+  const cleanTag = normalizeTag(clanTag).replace(/^#/, "");
+  const { data: clans, error } = await supabase
+    .from("clans")
+    .select("id, name, tag");
 
-async function readData(): Promise<DataJson> {
-  const file = await readFile(DATA_PATH, "utf-8");
-  return JSON.parse(file);
-}
+  if (error || !clans) return null;
 
-async function writeData(data: DataJson) {
-  await writeFile(DATA_PATH, JSON.stringify(data, null, 2), "utf-8");
+  return (
+    clans.find((c) => normalizeTag(c.tag).replace(/^#/, "") === cleanTag) ??
+    null
+  );
 }
 
 export async function GET(req: Request) {
@@ -36,20 +33,28 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const clanTag = searchParams.get("clanTag");
 
-    const data = await readData();
-
     if (clanTag) {
-      const normalizedInput = normalizeTag(clanTag);
-      const clan = data.ClanList.data.find(
-        (c) => normalizeTag(c.tag) === normalizedInput,
-      );
-      return Response.json(clan?.CWL?.data ?? []);
+      const clan = await findClanByTag(clanTag);
+      if (!clan) {
+        return Response.json([]);
+      }
+
+      const { data, error } = await supabase
+        .from("cwl_members")
+        .select("*")
+        .eq("clan_id", clan.id);
+
+      if (error) throw error;
+
+      return Response.json((data ?? []).map(mapDbMemberToApi));
     }
 
-    // Ambil CWL data dari setiap clan dan gabungkan
-    const cwlData = data.ClanList.data.flatMap((clan) => clan.CWL?.data ?? []);
-    return Response.json(cwlData);
-  } catch {
+    const { data, error } = await supabase.from("cwl_members").select("*");
+    if (error) throw error;
+
+    return Response.json((data ?? []).map(mapDbMemberToApi));
+  } catch (err) {
+    console.error("GET CWL Error:", err);
     return Response.json({ error: "Gagal membaca data" }, { status: 500 });
   }
 }
@@ -58,7 +63,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Payload can be: { clanTag: string, members: APIClanMember[] } or APIClanMember[] (fallback)
     let clanTag: string | undefined;
     let members: APIClanMember[] = [];
 
@@ -71,66 +75,72 @@ export async function POST(req: Request) {
       return Response.json({ error: "Payload tidak valid" }, { status: 400 });
     }
 
-    const data = await readData();
+    let targetClan: { id: number; name: string; tag: string } | null = null;
 
     if (clanTag) {
-      const normalizedClanTag = normalizeTag(clanTag);
-      const clan = data.ClanList.data.find(
-        (c) => normalizeTag(c.tag) === normalizedClanTag,
-      );
+      targetClan = await findClanByTag(clanTag);
+    } else {
+      const { data: firstClans } = await supabase
+        .from("clans")
+        .select("id, name, tag")
+        .order("id", { ascending: true })
+        .limit(1);
 
-      if (!clan) {
-        return Response.json(
-          { error: "Clan tidak ditemukan" },
-          { status: 404 },
-        );
-      }
-
-      if (!clan.CWL) {
-        clan.CWL = { data: [] };
-      }
-
-      const existing = clan.CWL.data ?? [];
-      const existingTags = new Set(existing.map((m) => normalizeTag(m.tag)));
-      const newMembers = members.filter(
-        (m) => m.tag && !existingTags.has(normalizeTag(m.tag)),
-      );
-
-      clan.CWL.data = [...existing, ...newMembers];
-      await writeData(data);
-
-      return Response.json({
-        success: true,
-        added: newMembers.length,
-        total: clan.CWL.data.length,
-        members: clan.CWL.data,
-      });
+      targetClan = firstClans?.[0] ?? null;
     }
 
-    // Fallback jika tidak ada clanTag: tambahkan ke clan pertama
-    if (data.ClanList.data.length > 0) {
-      const targetClan = data.ClanList.data[0];
-      if (!targetClan.CWL) {
-        targetClan.CWL = { data: [] };
-      }
-      const existing = targetClan.CWL.data ?? [];
-      const existingTags = new Set(existing.map((m) => normalizeTag(m.tag)));
-      const newMembers = members.filter(
-        (m) => m.tag && !existingTags.has(normalizeTag(m.tag)),
-      );
-      targetClan.CWL.data = [...existing, ...newMembers];
-      await writeData(data);
-
-      return Response.json({
-        success: true,
-        added: newMembers.length,
-        total: targetClan.CWL.data.length,
-        members: targetClan.CWL.data,
-      });
+    if (!targetClan) {
+      return Response.json({ error: "Clan tidak ditemukan" }, { status: 404 });
     }
 
-    return Response.json({ error: "Clan tidak ditemukan" }, { status: 404 });
-  } catch {
+    const { data: existingRows, error: fetchError } = await supabase
+      .from("cwl_members")
+      .select("*")
+      .eq("clan_id", targetClan.id);
+
+    if (fetchError) throw fetchError;
+
+    const existing = existingRows ?? [];
+    const existingTags = new Set(existing.map((m) => normalizeTag(m.tag)));
+
+    const newMembers = members.filter(
+      (m) => m.tag && !existingTags.has(normalizeTag(m.tag)),
+    );
+
+    if (newMembers.length > 0) {
+      const rowsToInsert = newMembers.map((m) => ({
+        tag: normalizeTag(m.tag),
+        clan_id: targetClan!.id,
+        name: m.name,
+        town_hall_level: m.townHallLevel ?? 0,
+        role: m.role ?? "member",
+        exp_level: m.expLevel ?? 0,
+        trophies: m.trophies ?? 0,
+        clan_name: m.clanName ?? targetClan!.name,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("cwl_members")
+        .insert(rowsToInsert);
+
+      if (insertError) throw insertError;
+    }
+
+    const { data: updatedRows } = await supabase
+      .from("cwl_members")
+      .select("*")
+      .eq("clan_id", targetClan.id);
+
+    const formattedMembers = (updatedRows ?? []).map(mapDbMemberToApi);
+
+    return Response.json({
+      success: true,
+      added: newMembers.length,
+      total: formattedMembers.length,
+      members: formattedMembers,
+    });
+  } catch (err) {
+    console.error("POST CWL Error:", err);
     return Response.json({ error: "Gagal menyimpan data" }, { status: 500 });
   }
 }
@@ -146,37 +156,33 @@ export async function DELETE(req: Request) {
     }
 
     const normalizedMemberTag = normalizeTag(tag);
-    const data = await readData();
 
     if (clanTag) {
-      const normalizedClanTag = normalizeTag(clanTag);
-      const clan = data.ClanList.data.find(
-        (c) => normalizeTag(c.tag) === normalizedClanTag,
-      );
+      const clan = await findClanByTag(clanTag);
+      if (clan) {
+        const { error } = await supabase
+          .from("cwl_members")
+          .delete()
+          .eq("clan_id", clan.id)
+          .eq("tag", normalizedMemberTag);
 
-      if (clan?.CWL?.data) {
-        clan.CWL.data = clan.CWL.data.filter(
-          (m) => normalizeTag(m.tag) !== normalizedMemberTag,
-        );
+        if (error) throw error;
       }
     } else {
-      // Hapus member dari semua clan jika clanTag tidak dispesifikasikan
-      for (const clan of data.ClanList.data) {
-        if (clan.CWL?.data) {
-          clan.CWL.data = clan.CWL.data.filter(
-            (m) => normalizeTag(m.tag) !== normalizedMemberTag,
-          );
-        }
-      }
-    }
+      const { error } = await supabase
+        .from("cwl_members")
+        .delete()
+        .eq("tag", normalizedMemberTag);
 
-    await writeData(data);
+      if (error) throw error;
+    }
 
     return Response.json({
       success: true,
       removed: 1,
     });
-  } catch {
+  } catch (err) {
+    console.error("DELETE CWL Error:", err);
     return Response.json({ error: "Gagal menghapus data" }, { status: 500 });
   }
 }

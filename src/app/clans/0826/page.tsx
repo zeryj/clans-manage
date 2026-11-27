@@ -14,7 +14,7 @@ interface ClanDisplayItem {
 
 export default async function page() {
   const clans: ClanDisplayItem[] = ListClan.ClanList.data;
-  // 1. Ambil seluruh anggota live dari semua clan via API
+  
   const allMembersResults = await Promise.all(
     clans.map(async (c) => {
       try {
@@ -29,7 +29,7 @@ export default async function page() {
     }),
   );
 
-  // 2. Gabungkan dan filter duplikat tag
+  
   const seenTags = new Set<string>();
   const cwlAvailableMembers: APIClanMember[] = [];
 

@@ -1,10 +1,5 @@
 import LegendLeaderboard from "@/containers/LegendLeaderboard";
 
-export const metadata = {
-  title: "Legend League Division 3 Leaderboard - Clans Manage",
-  description:
-    "Leaderboard pemain divisi Legend 3 beserta statistik serangan dan pertahanan.",
-};
 
 export default function LegendMembersPage() {
   return (

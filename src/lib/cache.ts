@@ -3,7 +3,7 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-// Global in-memory cache map
+
 const memoryCache = new Map<string, CacheEntry<unknown>>();
 
 /**

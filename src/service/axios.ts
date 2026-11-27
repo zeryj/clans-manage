@@ -1,11 +1,11 @@
 import axios, { type AxiosError } from "axios";
 
 const CLASHKING_BASE_URL = (
-  process.env.CLASHKING_URL || "https://api.clashk.ing"
+  process.env.CLASHKING_URL
 ).replace(/\/+$/, "");
 
 const OFFICIAL_COC_BASE_URL = (
-  process.env.COC_URL || "https://api.clashofclans.com/v1"
+  process.env.COC_URL
 ).replace(/\/+$/, "");
 
 export const cocClient = axios.create({
@@ -18,14 +18,14 @@ export const cocClient = axios.create({
 
 cocClient.interceptors.request.use(
   (request) => {
-    // Endpoints under /v2/ belong to ClashKing API
+    
     if (request.url?.startsWith("/v2/")) {
       request.baseURL = CLASHKING_BASE_URL;
       delete request.headers.Authorization;
       return request;
     }
 
-    // Other endpoints belong to Official Supercell Clash of Clans API
+    
     request.baseURL = OFFICIAL_COC_BASE_URL;
     const token =
       process.env.API_COC ||

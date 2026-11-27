@@ -15,7 +15,7 @@ interface ClanCwlListProps {
 }
 
 export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
-  // 1. Dapatkan clan dari data.json berdasarkan tag sebagai initial data
+  
   const initialClan = data.ClanList.data.find(
     (c) =>
       (tag && normalizeTag(c.tag) === normalizeTag(tag)) ||
@@ -28,7 +28,7 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
   const [cwlMembers, setCwlMembers] = useState<APIClanMember[]>(initialMembers);
   const [deletingTag, setDeletingTag] = useState<string | null>(null);
 
-  // 2. Fetch data terbaru dari /api/cwl
+  
   const fetchCwlMembers = useCallback(async () => {
     if (!tag) return;
     try {
@@ -44,7 +44,7 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
     }
   }, [tag]);
 
-  // 3. Listener untuk event pembaruan (saat ditambah via popup)
+  
   useEffect(() => {
     const handleCwlUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<{ clanTag?: string }>;
@@ -63,7 +63,7 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
     };
   }, [tag, fetchCwlMembers]);
 
-  // 4. Hapus member dari CWL
+  
   const handleDeleteMember = async (memberTag: string) => {
     if (!tag) return;
     setDeletingTag(memberTag);
@@ -85,7 +85,7 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
     }
   };
 
-  // 5. Search dan filter
+  
   const { searchTerm, setSearchTerm, filteredMembers } =
     useCwlMemberSearch(cwlMembers);
 

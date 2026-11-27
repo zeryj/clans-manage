@@ -1,11 +1,11 @@
 /**
  * Clash of Clans API TypeScript Definitions
- * Based on official documentation: https://developer.clashofclans.com/#/documentation
+ * Based on official documentation: https:
  */
 
-// ==========================================
-// COMMON / SHARED MODELS
-// ==========================================
+
+
+
 
 export interface APICursors {
   after?: string;
@@ -48,9 +48,9 @@ export interface APIClientError {
   detail?: Record<string, unknown>;
 }
 
-// ==========================================
-// CLANS
-// ==========================================
+
+
+
 
 export type APIClanType = "open" | "inviteOnly" | "closed";
 export type APIWarFrequency =
@@ -145,9 +145,9 @@ export interface APIClanMemberList {
   paging?: APIPaging;
 }
 
-// ==========================================
-// CLAN WARS & CWL
-// ==========================================
+
+
+
 
 export type APIWarState = "notInWar" | "preparation" | "inWar" | "warEnded";
 export type APIBattleModifier = "none" | "hardMode";
@@ -249,9 +249,9 @@ export interface APIClanWarLeagueGroup {
   rounds: APIClanWarLeagueRound[];
 }
 
-// ==========================================
-// CLAN CAPITAL RAIDS
-// ==========================================
+
+
+
 
 export interface APICapitalRaidSeasonDistrict {
   id: number;
@@ -315,9 +315,9 @@ export interface APICapitalRaidSeasons {
   paging: APIPaging;
 }
 
-// ==========================================
-// PLAYERS
-// ==========================================
+
+
+
 
 export interface APIPlayerItem {
   name: string;
@@ -427,9 +427,9 @@ export interface APIVerifyTokenResponse {
   status: "ok" | "invalid";
 }
 
-// ==========================================
-// LEAGUES
-// ==========================================
+
+
+
 
 export interface APILeague {
   id: number;
@@ -535,9 +535,9 @@ export interface APILeagueGroupList {
   defenseLogs: APILeagueGroupLog[];
 }
 
-// ==========================================
-// LOCATIONS & RANKINGS
-// ==========================================
+
+
+
 
 export interface APILocation {
   localizedName?: string;
@@ -647,9 +647,9 @@ export interface APIPlayerSeasonRankingList {
   paging: APIPaging;
 }
 
-// ==========================================
-// LABELS
-// ==========================================
+
+
+
 
 export interface APILabel {
   id: number;
@@ -662,18 +662,18 @@ export interface APILabelList {
   paging: APIPaging;
 }
 
-// ==========================================
-// GOLD PASS
-// ==========================================
+
+
+
 
 export interface APIGoldPassSeason {
   startTime: string;
   endTime: string;
 }
 
-// ==========================================
-// QUERY PARAMETERS INTERFACES
-// ==========================================
+
+
+
 
 export interface APIPaginationParams {
   limit?: number;
@@ -692,9 +692,9 @@ export interface APIClanSearchParams extends APIPaginationParams {
   labelIds?: string;
 }
 
-// ==========================================
-// LOCAL DATA (data.json) INTERFACES
-// ==========================================
+
+
+
 
 export interface LocalClanItem {
   id: number;
@@ -715,9 +715,9 @@ export interface LocalDataJson {
 export const normalizeTag = (tag: string): string =>
   tag.trim().replace(/^#/, "").toUpperCase();
 
-// ==========================================
-// CLASHKING API MODELS (api.clashk.ing)
-// ==========================================
+
+
+
 
 export interface ClashKingMemberItem {
   tag: string;
@@ -765,9 +765,9 @@ export interface ClashKingWarResponse {
   items: ClashKingWarItem[];
 }
 
-// ==========================================
-// LEGEND LEADERBOARD & STATS INTERFACES
-// ==========================================
+
+
+
 
 export interface PlayerLegendSeasonOffenseDefenseStars {
   zero: number;
@@ -823,4 +823,50 @@ export interface LegendLeaderboardMember extends APIClanMember {
   legendStats?: PlayerLegendSeasonStats | null;
   legendDetails?: PlayerLegendSeasonResponse | null;
   isLoadingStats?: boolean;
+}
+
+export interface LegendSeriesItem {
+  day: string;
+  attacks: number;
+  defenses: number;
+  attackTrophies: number;
+  defenseTrophies: number;
+  trophies: number;
+}
+
+export interface BattleItem {
+  time: string;
+  townHallLevel: number;
+  opponent: {
+    tag: string;
+    name: string;
+    townHallLevel: number;
+  };
+  stars: number;
+  destructionPercentage: number;
+  duration: number;
+  shareCode: string;
+  trophies: number;
+}
+export interface BattleLogEntry {
+  type: "attack" | "defense";
+  time?: string;
+  stars: number;
+  destruction: number;
+  trophies: number;
+}
+
+export interface RankDayItem {
+  day: string;
+  topArmy?: {
+    name: string;
+    attacks: number;
+    triples: number;
+  } | null;
+  battlelog:
+    | BattleLogEntry[]
+    | {
+        attacks?: BattleLogEntry[];
+        defenses?: BattleLogEntry[];
+      };
 }

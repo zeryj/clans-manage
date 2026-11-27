@@ -44,7 +44,7 @@ export default function CwlMemberPopup({
       });
       if (!res.ok) throw new Error("Gagal menyimpan");
 
-      // Dispatch event agar ClanCwlList langsung update datanya
+      
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("cwl-updated", { detail: { clanTag } }),

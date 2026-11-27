@@ -10,14 +10,14 @@ import type {
 import api from "@/service/axios";
 
 const CACHE_KEY = "legend_league_3";
-const CACHE_TTL_SECONDS = 180; // 3 menit
+const CACHE_TTL_SECONDS = 180; 
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const forceRefresh = searchParams.get("forceRefresh") === "true";
 
-    // 1. Cek Cache Server jika bukan permintaan paksa refresh
+    
     if (!forceRefresh) {
       const cachedData = getCache(CACHE_KEY);
       if (cachedData) {
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       (member: any) => member.leagueTier?.name === "Legend League III",
     );
 
-    // 2. Fetch player detail dengan Concurrency Batching (chunk size 5)
+    
     const chunkSize = 5;
     const playersDetail: APIPlayer[] = [];
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // 3. Fetch league group logs dengan Concurrency Batching (chunk size 5)
+    
     const legendHistory: any[] = [];
 
     for (let i = 0; i < playersDetail.length; i += chunkSize) {
@@ -174,7 +174,7 @@ export async function GET(request: Request) {
       members: legendHistory,
     };
 
-    // 4. Simpan ke Cache Server
+    
     setCache(CACHE_KEY, responseData, CACHE_TTL_SECONDS);
 
     return NextResponse.json(responseData, {

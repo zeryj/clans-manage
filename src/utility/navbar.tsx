@@ -20,8 +20,8 @@ export default function Navbar() {
               clans manage
             </Link>
             <Link
-              href={"/leagues/legends/1"}
-              className="block rounded-lg hover:bg-[#18316b] transition-colors font-medium text-white"
+              href={"/leagues/legends/2"}
+              className="md:block rounded-lg hover:bg-[#18316b] transition-colors font-medium text-white hidden"
             >
               Leagues Leaderboard
             </Link>

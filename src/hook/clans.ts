@@ -31,5 +31,5 @@ export async function getClanMemberSearch(): Promise<ConfiguredClanData[]> {
   });
 }
 
-// Backward-compatibility alias
+
 export const useClanMemberSearch = getClanMemberSearch;

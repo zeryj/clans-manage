@@ -14,7 +14,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     >
       <div className="w-full  mx-auto pt-20 space-y-6 p-3  border-[#2c4176] border-b-2">
         <Link
-          href={"/leagues/legends/1"}
+          href={"/leagues/legends/2"}
           className="block rounded-lg hover:bg-[#18316b] transition-colors font-medium text-white"
           onClick={onToggle}
         >
