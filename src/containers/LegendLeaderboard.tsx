@@ -555,7 +555,7 @@ function MemberRow({
                   </span>
                 </div>
                 {member.rankedAtk && member.rankedAtk.length > 0 ? (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 grid grid-cols-4 gap-2">
+                  <div className="space-y-1.5 h-fit overflow-y-auto pr-1 grid grid-cols-4 md:grid-cols-6 gap-2">
                     {member.rankedAtk.map((atk: any, idx: number) => (
                       <div
                         key={idx}
@@ -607,7 +607,7 @@ function MemberRow({
                   </span>
                 </div>
                 {member.rankedDef && member.rankedDef.length > 0 ? (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 grid grid-cols-4 gap-2">
+                  <div className="space-y-1.5 h-fit overflow-y-auto pr-1 grid grid-cols-4 md:grid-cols-6 gap-2">
                     {member.rankedDef.map((def: any, idx: number) => (
                       <div
                         key={idx}
@@ -660,7 +660,7 @@ function MemberRow({
                   </span>
                 </div>
                 {member.rankedAtk && member.rankedAtk.length > 0 ? (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 grid grid-cols-4 gap-2">
+                  <div className="space-y-1.5 h-fit overflow-y-auto pr-1 grid grid-cols-5 md:grid-cols-6 gap-2">
                     {member.rankedAtk.map((atk: any, idx: number) => (
                       <div
                         key={idx}
@@ -711,7 +711,7 @@ function MemberRow({
                   </span>
                 </div>
                 {member.rankedDef && member.rankedDef.length > 0 ? (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1 grid grid-cols-4 gap-2">
+                  <div className="space-y-1.5 h-fit overflow-y-auto pr-1 grid grid-cols-5 md:grid-cols-6 gap-2">
                     {member.rankedDef.map((def: any, idx: number) => (
                       <div
                         key={idx}

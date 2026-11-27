@@ -1,11 +1,11 @@
 import axios, { type AxiosError } from "axios";
 
 const CLASHKING_BASE_URL = (
-  process.env.CLASHKING_URL
+  process.env.CLASHKING_URL ?? ""
 ).replace(/\/+$/, "");
 
 const OFFICIAL_COC_BASE_URL = (
-  process.env.COC_URL
+  process.env.COC_URL ?? ""
 ).replace(/\/+$/, "");
 
 export const cocClient = axios.create({
@@ -13,7 +13,7 @@ export const cocClient = axios.create({
   headers: {
     Accept: "application/json",
   },
-  timeout: 30000,
+  timeout: 60000,
 });
 
 cocClient.interceptors.request.use(

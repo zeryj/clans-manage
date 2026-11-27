@@ -1,8 +1,9 @@
+
 import Image from "next/image";
 import ClanCwlList from "@/containers/ClanCwlList";
 import ClanMemberList from "@/containers/ClanMemberList";
-import CwlMemberManager from "@/containers/CwlMemberManager";
-import data from "@/lib/data.json";
+
+import { supabase } from "@/lib/supabase";
 import type { APIClanMember } from "@/lib/type";
 import { normalizeTag } from "@/lib/type";
 import { officialClansApi } from "@/service/endpoints";
@@ -14,11 +15,16 @@ interface PageProps {
 export default async function ClanDetailPage({ params }: PageProps) {
   const { tag } = await params;
 
-  const allClans = data.ClanList.data;
-  const otherClans = allClans.filter(
+  
+  const { data: allClans } = await supabase
+    .from("clans")
+    .select("id, name, tag, logo");
+
+  const otherClans = (allClans ?? []).filter(
     (c) => normalizeTag(c.tag) !== normalizeTag(tag),
   );
 
+  
   const [clan, currentwar, otherMembersResults] = await Promise.all([
     officialClansApi.getClan(tag),
     officialClansApi.getCurrentWar(tag),
@@ -106,7 +112,7 @@ export default async function ClanDetailPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* Daftar Anggota Clan Aktif (hanya menampilkan anggota asli clan ini) */}
+        {/* Daftar Anggota Clan Aktif */}
         <ClanMemberList members={clan.memberList ?? []} />
       </div>
 
@@ -177,7 +183,7 @@ export default async function ClanDetailPage({ params }: PageProps) {
         </div>
       )}
 
-      {/*daftar cwl (menampilkan semua kandidat dari seluruh clan)*/}
+      {/* daftar cwl */}
       <div className="border border-[#2c4176] rounded-md">
         {/* <CwlMemberManager members={cwlAvailableMembers} clanTag={clan.tag} /> */}
         <ClanCwlList tag={clan.tag} name={clan.name} page="member" />

@@ -1,91 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FaTrash } from "react-icons/fa";
 import { useCwlMemberSearch } from "@/hook/cwl";
-import data from "@/lib/data.json";
-import type { APIClanMember } from "@/lib/type";
+import { useCwlMembers, useDeleteCwlMember } from "@/hook/useSupabase";
 import { normalizeTag } from "@/lib/type";
 
 interface ClanCwlListProps {
   id?: number;
   tag?: string;
   name?: string;
-  page: "admin" | "member"
+  page: "admin" | "member";
 }
 
-export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
-  
-  const initialClan = data.ClanList.data.find(
-    (c) =>
-      (tag && normalizeTag(c.tag) === normalizeTag(tag)) ||
-      (id !== undefined && c.id === id),
-  );
+export default function ClanCwlList({ tag, name, page }: ClanCwlListProps) {
+  const queryClient = useQueryClient();
+  const { data: cwlMembers = [], isLoading } = useCwlMembers(tag);
+  const deleteMutation = useDeleteCwlMember(tag);
 
-  const initialMembers =
-    (initialClan?.CWL?.data as unknown as APIClanMember[]) ?? [];
-
-  const [cwlMembers, setCwlMembers] = useState<APIClanMember[]>(initialMembers);
-  const [deletingTag, setDeletingTag] = useState<string | null>(null);
-
-  
-  const fetchCwlMembers = useCallback(async () => {
-    if (!tag) return;
-    try {
-      const res = await fetch(`/api/cwl?clanTag=${encodeURIComponent(tag)}`);
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json)) {
-          setCwlMembers(json);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal memuat data CWL:", err);
-    }
-  }, [tag]);
-
-  
+  // Tetap dengarkan custom event "cwl-updated" jika ada komponen lain yang menambah member
   useEffect(() => {
     const handleCwlUpdated = (e: Event) => {
       const customEvent = e as CustomEvent<{ clanTag?: string }>;
-      if (!customEvent.detail?.clanTag || !tag) {
-        fetchCwlMembers();
-      } else if (
+      if (
+        !customEvent.detail?.clanTag ||
+        !tag ||
         normalizeTag(customEvent.detail.clanTag) === normalizeTag(tag)
       ) {
-        fetchCwlMembers();
+        queryClient.invalidateQueries({ queryKey: ["cwl-members", tag] });
       }
     };
 
     window.addEventListener("cwl-updated", handleCwlUpdated);
-    return () => {
-      window.removeEventListener("cwl-updated", handleCwlUpdated);
-    };
-  }, [tag, fetchCwlMembers]);
+    return () => window.removeEventListener("cwl-updated", handleCwlUpdated);
+  }, [tag, queryClient]);
 
-  
-  const handleDeleteMember = async (memberTag: string) => {
-    if (!tag) return;
-    setDeletingTag(memberTag);
-    try {
-      const res = await fetch("/api/cwl", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clanTag: tag, tag: memberTag }),
-      });
-      if (res.ok) {
-        setCwlMembers((prev) =>
-          prev.filter((m) => normalizeTag(m.tag) !== normalizeTag(memberTag)),
-        );
-      }
-    } catch (err) {
-      console.error("Gagal menghapus member CWL:", err);
-    } finally {
-      setDeletingTag(null);
-    }
-  };
-
-  
   const { searchTerm, setSearchTerm, filteredMembers } =
     useCwlMemberSearch(cwlMembers);
 
@@ -125,14 +75,21 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
 
       {/* List Member */}
       <div className="flex flex-col divide-y divide-[#1e3466] max-h-[460px] overflow-y-auto pr-1 scrollbar-thin">
-        {filteredMembers.length > 0 ? (
-          filteredMembers.map((member) => (
-            <div
-              key={member.tag}
-              className="flex items-center justify-between py-2.5 px-2 hover:bg-[#12244F]/50 rounded transition"
-            >
-              {/* Info Nama & Tag */}
-              <div className="flex items-center gap-3">
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-zinc-400">
+            Memuat peserta CWL...
+          </div>
+        ) : filteredMembers.length > 0 ? (
+          filteredMembers.map((member) => {
+            const isDeleting =
+              deleteMutation.isPending &&
+              deleteMutation.variables === member.tag;
+
+            return (
+              <div
+                key={member.tag}
+                className="flex items-center justify-between py-2.5 px-2 hover:bg-[#12244F]/50 rounded transition"
+              >
                 <div>
                   <p className="font-medium text-sm text-zinc-100">
                     {member.name || "Tanpa Nama"}
@@ -141,29 +98,26 @@ export default function ClanCwlList({ id, tag, name, page }: ClanCwlListProps) {
                     {member.tag}
                   </p>
                 </div>
-              </div>
-              {/* Tombol Hapus */}
-            {page === "admin" ? (
-              <button
-                type="button"
-                onClick={() => handleDeleteMember(member.tag)}
-                disabled={deletingTag === member.tag}
-                className="p-2 text-zinc-400 hover:text-red-400 transition rounded disabled:opacity-50"
-                title="Hapus dari CWL"
-              >
-                <FaTrash className="w-3.5 h-3.5" />
-              </button>
-            ) : null }
-            </div>
 
-          ))
+                {page === "admin" && (
+                  <button
+                    type="button"
+                    onClick={() => deleteMutation.mutate(member.tag)}
+                    disabled={isDeleting}
+                    className="p-2 text-zinc-400 hover:text-red-400 transition rounded disabled:opacity-50"
+                    title="Hapus dari CWL"
+                  >
+                    <FaTrash className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })
         ) : (
           <div className="py-8 text-center text-sm text-zinc-400">
             {searchTerm
               ? `Tidak ada member CWL yang cocok dengan "${searchTerm}"`
-              : cwlMembers.length > 0
-                ? ` ${cwlMembers.length} member CWL`
-                : "Belum ada member CWL."}
+              : "Belum ada member CWL."}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import Image from "next/image";
 import ClanCwlList from "@/containers/ClanCwlList";
 import CwlMemberManager from "@/containers/CwlMemberManager";
-import ListClan from "@/lib/data.json";
+import { supabase } from "@/lib/supabase";
 import { clansApi } from "@/service/endpoints";
 import { normalizeTag, type APIClanMember } from "@/lib/type";
 
@@ -12,9 +12,19 @@ interface ClanDisplayItem {
   name: string;
 }
 
-export default async function page() {
-  const clans: ClanDisplayItem[] = ListClan.ClanList.data;
+export default async function AdminPage() {
   
+  const { data, error } = await supabase
+    .from("clans")
+    .select("*")
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("Gagal mengambil data clans:", error.message);
+  }
+
+  const clans: ClanDisplayItem[] = data ?? [];
+
   const allMembersResults = await Promise.all(
     clans.map(async (c) => {
       try {
@@ -40,6 +50,7 @@ export default async function page() {
       cwlAvailableMembers.push(m);
     }
   }
+
   return (
     <div className="container max-w-7xl mx-auto px-4 py-4 flex flex-col gap-5">
       {clans.map((item) => (
@@ -50,7 +61,7 @@ export default async function page() {
           <div className="flex items-center gap-3 p-3">
             <Image
               src={item.logo}
-              alt="logo clan"
+              alt={`logo ${item.name}`}
               width={80}
               height={80}
               className="aspect-square w-[50px] h-[50px] object-contain"
@@ -65,7 +76,7 @@ export default async function page() {
             </div>
           </div>
           <CwlMemberManager members={cwlAvailableMembers} clanTag={item.tag} />
-          <ClanCwlList tag={item.tag} name={item.name} page="admin"/>
+          <ClanCwlList tag={item.tag} name={item.name} page="admin" />
         </div>
       ))}
     </div>

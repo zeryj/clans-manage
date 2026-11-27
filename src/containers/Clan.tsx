@@ -1,16 +1,19 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import ListClan from "@/lib/data.json";
-
-interface ClanDisplayItem {
-  id: number;
-  tag: string;
-  logo: string;
-  name: string;
-}
+import { useClans } from "@/hook/useSupabase";
 
 export default function Clan() {
-  const clans: ClanDisplayItem[] = ListClan.ClanList.data;
+  const { data: clans = [], isLoading, isError } = useClans();
+
+  if (isLoading) {
+    return <p className="text-sm text-zinc-400">Memuat daftar clan...</p>;
+  }
+
+  if (isError) {
+    return <p className="text-sm text-red-400">Gagal memuat data clan.</p>;
+  }
 
   return (
     <div className="flex flex-col gap-2">

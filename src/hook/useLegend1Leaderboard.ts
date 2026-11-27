@@ -97,6 +97,8 @@ export interface LegendMember {
   error?: string;
   totalattackTrophies?: number,
   totaldefenseTrophies?: number,
+  seasonStart?: string,
+  seasonEnd?:string
 }
 
 interface LegendResponse {

@@ -12,6 +12,7 @@ import {
   FaSyncAlt,
   FaTrophy,
   FaStar,
+  FaClock,
 } from "react-icons/fa";
 import { GiSwordClash } from "react-icons/gi";
 import {
@@ -23,25 +24,18 @@ import Link from "next/link";
 export type SortOption = "trophies" | "atk" | "def";
 
 export default function LegendLeaderboard() {
-  const [selectedId, setSelectedId] = useState<1 | 2 | 3>(1);
   const [sortBy, setSortBy] = useState<SortOption>("trophies");
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedTag, setExpandedTag] = useState<string | null>(null);
 
-  const handleDivisionChange = (id: 1 | 2 | 3) => {
-    setSelectedId(id);
-    setExpandedTag(null);
-    if (id === 1 && (sortBy === "atk" || sortBy === "def")) {
-      setSortBy("trophies");
-    }
-  };
 
   const { members, total, loading, isFetching, error, refetch } =
     useLegendLeaderboard(1);
 
   const getAtkTrophies = (m: LegendMember) =>
     Number(
-      m.stat?.attackTrophies ??
+      m.totalattackTrophies ??
+        m.stat?.attackTrophies ??
         m.stat?.attack?.trophies ??
         m.rankedHistory?.items?.[0]?.attackTrophies ??
         0,
@@ -49,7 +43,8 @@ export default function LegendLeaderboard() {
 
   const getDefTrophies = (m: LegendMember) =>
     Number(
-      m.stat?.defenseTrophies ??
+      m.totaldefenseTrophies ??
+        m.stat?.defenseTrophies ??
         m.stat?.defense?.trophies ??
         m.rankedHistory?.items?.[0]?.defenseTrophies ??
         0,
@@ -466,11 +461,6 @@ function MemberRow({
               <span className="font-semibold text-zinc-200">
                 {defCount} def
               </span>
-              {avgDefStars !== undefined && (
-                <span className="text-rose-400 font-medium">
-                  ({Number(avgDefStars).toFixed(2)} ⭐ avg)
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -494,10 +484,15 @@ function MemberRow({
             <div className="w-full cursor-pointer py-3.5">
               {/* Mobile top bar: Rank & Player info */}
               <div className="divide-y divide-[#1e3466]/60">
+                <div className="p-5 flex justify-between">
+                  <span className="font-semibold text-sm sm:text-base text-zinc-100 truncate flex gap-2 items-center"><FaClock />{member.seasonStart}</span>
+                  <span className="font-semibold text-sm sm:text-base text-amber-400 truncate flex gap-2 items-center"><FaTrophy className="text-xs" />{member.trophies}</span>
+                </div>
                 {member.rankedHistory?.items &&
                 member.rankedHistory.items.length > 0 ? (
                   member.rankedHistory.items.map((item) => {
                     const netTrophies = item.trophies ?? 0;
+                    
                     const rowKey = `${member.tag}-${item.day}`;
                     const isDayExpanded = expandedKey === rowKey;
 
@@ -526,20 +521,20 @@ function MemberRow({
                               toggleExpand(rowKey);
                             }
                           }}
-                          className={`py-2.5 ps-5 pe-3 grid grid-cols-3 lg:grid-cols-12 gap-3 lg:items-center cursor-pointer select-none transition ${
+                          className={`py-2.5 ps-5 pe-3 grid grid-cols-4 md:grid-cols-12 gap-3 md:items-center cursor-pointer select-none transition ${
                             isDayExpanded
                               ? "bg-[#18316b]/35"
                               : "hover:bg-[#18316b]/20"
                           }`}
                         >
                           {/* Tanggal & Mobile Net Trophies */}
-                          <div className="flex items-center justify-between col-span-2 lg:col-span-5 w-full">
+                          <div className="flex items-center justify-between col-span-2 md:col-span-5 w-full">
                             <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200 font-mono">
                               <span>{item.day}</span>
                             </div>
 
                             {/* Mobile Right: Net Trophies hari itu */}
-                            <div className="lg:hidden flex items-center gap-1">
+                            <div className="md:hidden flex items-center gap-1">
                               <span
                                 className={`font-bold text-sm flex items-center gap-1 ${
                                   netTrophies >= 0
@@ -557,7 +552,7 @@ function MemberRow({
 
                           {/* Net Trophies (Desktop) */}
                           <div
-                            className={`hidden lg:flex lg:col-span-2 items-center justify-end gap-1.5 font-bold text-sm py-1 px-2 rounded ${
+                            className={`hidden md:flex md:col-span-2 items-center justify-end gap-1.5 font-bold text-sm py-1 px-2 rounded ${
                               netTrophies >= 0
                                 ? "text-emerald-400"
                                 : "text-rose-400"
@@ -571,7 +566,7 @@ function MemberRow({
                             </span>
                           </div>
 
-                          <div className="col-span-5 border-s border-[#2c4176]/50 lg:border-none  p-2 grid grid-cols-5">
+                          <div className="md:col-span-5 border-s border-[#2c4176]/50 lg:border-none p-2 grid md:grid-cols-5">
                             {/* Attack Stats Harian */}
                             <div className="col-span-2 flex items-center justify-between lg:justify-center gap-2 text-xs rounded ">
                               <div className="flex items-center gap-1.5 justify-end lg:justify-center">
@@ -603,13 +598,20 @@ function MemberRow({
                                 </span>
                               </div>
                             </div>
-                            <div className="flex justify-center items-center">
+                            <div className="flex justify-center items-center hidden md:block">
                               <FaChevronDown
                                 className={`text-[10px] text-zinc-400 transition-transform duration-200 ${
                                   isDayExpanded ? "rotate-180 text-sky-400" : ""
                                 }`}
                               />
                             </div>
+                          </div>
+                          <div className="flex justify-center items-center md:hidden block">
+                            <FaChevronDown
+                              className={`text-[10px] text-zinc-400 transition-transform duration-200 ${
+                                isDayExpanded ? "rotate-180 text-sky-400" : ""
+                              }`}
+                            />
                           </div>
                         </div>
 

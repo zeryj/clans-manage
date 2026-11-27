@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       }
     }
 
-    const clantag = process.env.CLAN_TAG || "#2G0LCRUGJ";
+    const clantag = "#2G0LCRUGJ";
     const encodedTag = encodeURIComponent(clantag);
 
     const clan = await api.get(`/clans/${encodedTag}/members`);
